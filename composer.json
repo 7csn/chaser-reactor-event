@@ -3,6 +3,7 @@
   "description": "基于 event 扩展的事件反应器",
   "type": "library",
   "require": {
+    "php": ">=7.4.0",
     "ext-event": ">=1.2.6-beta",
     "7csn/chaser-reactor": "dev-master"
   },
