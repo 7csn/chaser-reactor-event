@@ -9,7 +9,7 @@ use Throwable;
  *
  * @package chaser\reactor
  */
-class Event extends ReactorAbstract
+class Event extends Reactor
 {
     /**
      * 事件库
@@ -146,7 +146,7 @@ class Event extends ReactorAbstract
     /**
      * 循环处理事件
      */
-    public function loop()
+    public function loop(): void
     {
         $this->eventBase->loop();
     }
@@ -154,7 +154,7 @@ class Event extends ReactorAbstract
     /**
      * 破坏事件循环
      */
-    public function destroy()
+    public function destroy(): void
     {
         $this->eventBase->stop();
     }
