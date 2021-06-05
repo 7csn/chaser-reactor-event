@@ -26,13 +26,6 @@ class Event extends Reactor
     protected string $eventClass;
 
     /**
-     * 定时器ID
-     *
-     * @var int
-     */
-    protected int $timerId = 0;
-
-    /**
      * 初始化事件库
      */
     public function __construct()
@@ -47,65 +40,73 @@ class Event extends Reactor
     /**
      * @inheritDoc
      */
-    protected function addReadData(int $intFd, $fd, callable $callback)
+    public function loop(): void
+    {
+        $this->eventBase->loop();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function destroy(): void
+    {
+        $this->eventBase->exit();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function makeReadData(int $intFd, $fd, callable $callback)
     {
         $flags = $this->eventClass::READ | $this->eventClass::PERSIST;
-
         $event = new $this->eventClass($this->eventBase, $fd, $flags, $callback);
-
         return $event && $event->add() ? $event : false;
     }
 
     /**
      * @inheritDoc
      */
-    protected function addWriteData(int $intFd, $fd, callable $callback)
+    protected function makeWriteData(int $intFd, $fd, callable $callback)
     {
         $flags = $this->eventClass::WRITE | $this->eventClass::PERSIST;
-
         $event = new $this->eventClass($this->eventBase, $fd, $flags, $callback);
-
         return $event && $event->add() ? $event : false;
     }
 
     /**
      * @inheritDoc
      */
-    protected function addSignalData(int $key, int $signal, callable $callback)
+    protected function makeSignalData(int $signal, callable $callback)
     {
-        $event = $this->eventClass::signal($this->eventBase, $signal, $callback);
-
+        $flags = $this->eventClass::SIGNAL | $this->eventClass::PERSIST;
+        $event = new $this->eventClass($this->eventBase, $signal, $flags, $callback);
         return $event && $event->add() ? $event : false;
     }
 
     /**
      * @inheritDoc
      */
-    protected function addIntervalData(int $timerId, int $seconds, callable $callback)
+    protected function makeIntervalData(int $timerId, int $seconds, callable $callback)
     {
         $flags = $this->eventClass::TIMEOUT | $this->eventClass::PERSIST;
-
         $event = new $this->eventClass($this->eventBase, -1, $flags, fn() => $this->timerCallback($timerId, self::EV_INTERVAL));
-
         return $event && $event->add($seconds) ? [$event, $callback] : false;
     }
 
     /**
      * @inheritDoc
      */
-    protected function addTimeoutData(int $timerId, int $seconds, callable $callback)
+    protected function makeTimeoutData(int $timerId, int $seconds, callable $callback)
     {
         $flags = $this->eventClass::TIMEOUT | $this->eventClass::PERSIST;
-
         $event = new $this->eventClass($this->eventBase, -1, $flags, fn() => $this->timerCallback($timerId, self::EV_TIMEOUT));
-
         return $event && $event->add($seconds) ? [$event, $callback] : false;
     }
 
     /**
      * @inheritDoc
      */
-    protected function delCallback(int $flag, int $key): bool
+    protected function delDataModel(int $flag, int $key): bool
     {
         switch ($flag) {
             case self::EV_READ:
@@ -135,27 +136,7 @@ class Event extends Reactor
                 $this->delTimeout($timerId);
             }
 
-            try {
-                $callback($timerId);
-            } catch (Throwable $e) {
-                exit(250);
-            }
+            $callback($timerId);
         }
-    }
-
-    /**
-     * 循环处理事件
-     */
-    public function loop(): void
-    {
-        $this->eventBase->loop();
-    }
-
-    /**
-     * 破坏事件循环
-     */
-    public function destroy(): void
-    {
-        $this->eventBase->stop();
     }
 }
